@@ -30,24 +30,16 @@ class DaCCe(xFPDF):
         self.set_title("DACCe")
 
         root = ET.fromstring(xml)
-        print("[LOG] XML root tag:", root.tag)
 
         namespace_uri = root.tag.split("}")[0].strip("{")
-        print("[LOG] Namespace URI detectado:", namespace_uri)
         URL = f".//{{{namespace_uri}}}"
 
         is_nfe = "nfe" in namespace_uri.lower()
-        print("[LOG] Documento identificado como NFe?", is_nfe)
 
         det_event = root.find(f"{URL}detEvento")
         inf_event = root.find(f"{URL}infEvento")
         ret_event = root.find(f"{URL}retEvento")
         inf_ret_event = ret_event.find(f"{URL}infEvento") if ret_event is not None else None
-
-        print("[LOG] detEvento encontrado?", det_event is not None)
-        print("[LOG] infEvento encontrado?", inf_event is not None)
-        print("[LOG] retEvento encontrado?", ret_event is not None)
-        print("[LOG] infEvento dentro de retEvento encontrado?", inf_ret_event is not None)
 
         self.add_page(orientation="P", format="A4")
 
@@ -91,14 +83,12 @@ class DaCCe(xFPDF):
         if inf_event is not None:
             try:
                 evento_id = inf_event.attrib.get("Id")
-                print("[LOG] ID do Evento:", evento_id)
                 self.text(x=92, y=30, text=f"ID do Evento: {evento_id[2:]}")
             except Exception as e:
                 print("[ERRO] Falha ao extrair ID do Evento:", e)
 
         try:
             dh_evento_str = get_tag_text(node=inf_event, url=URL, tag="dhEvento")
-            print("[LOG] dhEvento:", dh_evento_str)
             dt, hr = get_date_utc(dh_evento_str)
             self.text(x=92, y=35, text=f"Criado em: {dt} {hr}")
         except Exception as e:
@@ -107,8 +97,6 @@ class DaCCe(xFPDF):
         try:
             dh_reg_str = get_tag_text(node=inf_ret_event, url=URL, tag="dhRegEvento")
             n_prot = get_tag_text(node=inf_ret_event, url=URL, tag="nProt")
-            print("[LOG] dhRegEvento:", dh_reg_str)
-            print("[LOG] nProt:", n_prot)
             dt, hr = get_date_utc(dh_reg_str)
             self.text(x=92, y=40, text=f"Protocolo: {n_prot} - Registrado na SEFAZ em: {dt} {hr}")
         except Exception as e:
@@ -130,10 +118,9 @@ class DaCCe(xFPDF):
         self.multi_cell(w=185, h=4, text=aviso, border=0, align="L", fill=False)
 
         tag_chave = "chNFe" if is_nfe else "chCTe"
-        print("[LOG] Tag usada para chave:", tag_chave)
         try:
             key = get_tag_text(node=inf_event, url=URL, tag=tag_chave)
-            print("[LOG] Chave extraída:", key)
+            
         except Exception as e:
             print("[ERRO] Falha ao extrair chave:", e)
             key = ""
@@ -157,7 +144,6 @@ class DaCCe(xFPDF):
             cnpj_dest = get_tag_text(node=inf_ret_event, url=URL, tag="CNPJDest")
             if not cnpj_dest:
                 cnpj_dest = get_tag_text(node=inf_ret_event, url=URL, tag="CNPJ")
-            print("[LOG] CNPJ Destinatário:", cnpj_dest)
         except Exception as e:
             print("[ERRO] Falha ao extrair CNPJ Destinatário:", e)
             cnpj_dest = ""
@@ -174,7 +160,6 @@ class DaCCe(xFPDF):
         self.set_xy(x=11, y=84)
         try:
             text = get_tag_text(node=det_event, url=URL, tag="xCondUso")
-            print("[LOG] xCondUso:", text)
         except Exception as e:
             print("[ERRO] Falha ao extrair xCondUso:", e)
             text = ""
@@ -189,7 +174,6 @@ class DaCCe(xFPDF):
         self.set_xy(x=11, y=106)
         try:
             text = get_tag_text(node=det_event, url=URL, tag="xCorrecao")
-            print("[LOG] xCorrecao:", text)
         except Exception as e:
             print("[ERRO] Falha ao extrair xCorrecao:", e)
             text = ""
