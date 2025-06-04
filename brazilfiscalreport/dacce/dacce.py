@@ -178,23 +178,41 @@ class DaCCe(xFPDF):
             text = get_tag_text(node=det_event, url=URL, tag="xCorrecao")
         except Exception:
             try:
-                # Caso não exista xCorrecao (modelo CT-e), monta o texto a partir de infCorrecao
-                inf_correcoes = det_event.findall(".//infCorrecao")
+                # Tenta identificar se é um evento de CC-e de CT-e
+                ev_cce_cte = det_event.find("evCCeCTe")
                 correcao_lista = []
-                for correcao in inf_correcoes:
-                    grupo = correcao.findtext("grupoAlterado", default="")
-                    campo = correcao.findtext("campoAlterado", default="")
-                    valor = correcao.findtext("valorAlterado", default="")
-                    if grupo or campo or valor:
-                        correcao_lista.append(f"Grupo: {grupo}, Campo: {campo}, Valor: {valor}")
-                text = "\n".join(correcao_lista)
+
+                if ev_cce_cte is not None:
+                    inf_correcoes = ev_cce_cte.findall("infCorrecao")
+                    print("[DEBUG] Quantidade de infCorrecao encontrados:", len(inf_correcoes))
+
+                    for correcao in inf_correcoes:
+                        grupo = correcao.findtext("grupoAlterado", default="")
+                        campo = correcao.findtext("campoAlterado", default="")
+                        valor = correcao.findtext("valorAlterado", default="")
+                        nro_item = correcao.findtext("nroItemAlterado", default="")
+
+                        linha = f"{campo}: {valor}"
+                        if grupo:
+                            linha += f" (Grupo: {grupo})"
+                        if nro_item:
+                            linha += f" [Item: {nro_item}]"
+
+                        correcao_lista.append(linha)
+
+                    text = "\n".join(correcao_lista)
+                else:
+                    text = ""
+
             except Exception as e:
-                print("[ERRO] Falha ao extrair informações de correção:", e)
+                print("[ERRO] Falha ao extrair informações de correção (CT-e):", e)
                 text = ""
 
-        print("[AVISO] Text de correção ", text)
+        print("[AVISO] Texto de correção:", repr(text))
+
         self.set_font("Helvetica", "", 8)
         self.multi_cell(w=185, h=4, text=text, border=0, align="L", fill=False)
+
 
         self.set_xy(x=11, y=265)
         rodape = (
