@@ -173,36 +173,42 @@ class DaCCe(xFPDF):
 
         self.set_xy(x=11, y=106)
         
+        self.set_xy(x=11, y=106)
+
+        cte_ns = "{http://www.portalfiscal.inf.br/cte}"  # namespace fixo para CTe
+
         try:
+            # Tenta extrair xCorrecao diretamente
             text = get_tag_text(node=det_event, url=URL, tag="xCorrecao")
         except Exception:
             try:
-                cte_ns = "{http://www.portalfiscal.inf.br/cte}"
+                # Nova lógica segura para detecção de infCorrecao
                 correcao_lista = []
-                inf_correcoes = det_event.findall(f".//{cte_ns}infCorrecao")
-                print("[DEBUG] infCorrecao encontrados:", len(inf_correcoes))
+                ev_cce_cte = det_event.find(f"{cte_ns}evCCeCTe")
+                if ev_cce_cte is not None:
+                    inf_correcoes = ev_cce_cte.findall(f"{cte_ns}infCorrecao")
+                    print("[DEBUG] infCorrecao encontrados:", len(inf_correcoes))
 
-                for correcao in inf_correcoes:
-                    grupo = correcao.findtext(f"{cte_ns}grupoAlterado", default="")
-                    campo = correcao.findtext(f"{cte_ns}campoAlterado", default="")
-                    valor = correcao.findtext(f"{cte_ns}valorAlterado", default="")
-                    nro_item = correcao.findtext(f"{cte_ns}nroItemAlterado", default="")
+                    for correcao in inf_correcoes:
+                        grupo = correcao.findtext(f"{cte_ns}grupoAlterado", default="")
+                        campo = correcao.findtext(f"{cte_ns}campoAlterado", default="")
+                        valor = correcao.findtext(f"{cte_ns}valorAlterado", default="")
+                        nro_item = correcao.findtext(f"{cte_ns}nroItemAlterado", default="")
 
-                    linha = f"{campo}: {valor}"
-                    if grupo:
-                        linha += f" (Grupo: {grupo})"
-                    if nro_item:
-                        linha += f" [Item: {nro_item}]"
+                        linha = f"{campo}: {valor}"
+                        if grupo:
+                            linha += f" (Grupo: {grupo})"
+                        if nro_item:
+                            linha += f" [Item: {nro_item}]"
 
-                    correcao_lista.append(linha)
+                        correcao_lista.append(linha)
 
                 text = "\n".join(correcao_lista)
-
             except Exception as e:
                 print("[ERRO] Falha ao extrair informações de correção:", e)
                 text = ""
 
-        print("[AVISO2] Texto de correção:", repr(text))
+        print("[AVISO] Texto de correção:", repr(text))
         self.set_font("Helvetica", "", 8)
         self.multi_cell(w=185, h=4, text=text, border=0, align="L", fill=False)
 
