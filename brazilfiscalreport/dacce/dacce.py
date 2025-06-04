@@ -41,6 +41,10 @@ class DaCCe(xFPDF):
                 return ""
             return node.findtext(f"{URL}{tag}", default="").strip()
 
+        # Função para remover namespace do tag
+        def strip_ns(tag):
+            return tag.split('}', 1)[-1] if '}' in tag else tag
+
         is_nfe = "nfe" in namespace_uri.lower()
 
         det_event = root.find(f"{URL}detEvento")
@@ -178,13 +182,6 @@ class DaCCe(xFPDF):
         self.rect(x=10, y=104, w=190, h=170, style="")
 
         self.set_xy(x=11, y=106)
-        
-        try:
-            text = find_text_ns(det_event, "xCorrecao")
-            print("[DEBUG] xCorrecao:", repr(text))
-        except Exception as e:
-            print("[ERRO] Falha ao extrair xCorrecao:", e)
-
 
         # Extrair o texto de correção (xCorrecao para NFe ou infCorrecao para CTe)
         text = ""
@@ -192,27 +189,45 @@ class DaCCe(xFPDF):
             # tenta extrair diretamente xCorrecao (NFe)
             text = find_text_ns(det_event, "xCorrecao")
         except Exception:
-            # Caso não tenha xCorrecao, tenta extrair CTe
+            text = ""
+
+        if not text:
             try:
                 correcao_lista = []
-                # namespace usado já está em URL, usa para buscar evCCeCTe e infCorrecao
-                ev_cce_cte = det_event.find(f"{URL}evCCeCTe")
+
+                # Busca o elemento evCCeCTe ignorando namespace
+                ev_cce_cte = None
+                for child in det_event:
+                    if strip_ns(child.tag) == "evCCeCTe":
+                        ev_cce_cte = child
+                        break
+
                 if ev_cce_cte is not None:
-                    inf_correcoes = ev_cce_cte.findall(f"{URL}infCorrecao")
+                    for inf_corr in ev_cce_cte:
+                        if strip_ns(inf_corr.tag) == "infCorrecao":
+                            grupo = ""
+                            campo = ""
+                            valor = ""
+                            nro_item = ""
 
-                    for correcao in inf_correcoes:
-                        grupo = correcao.findtext(f"{URL}grupoAlterado", default="")
-                        campo = correcao.findtext(f"{URL}campoAlterado", default="")
-                        valor = correcao.findtext(f"{URL}valorAlterado", default="")
-                        nro_item = correcao.findtext(f"{URL}nroItemAlterado", default="")
+                            for tag_child in inf_corr:
+                                tag_name = strip_ns(tag_child.tag)
+                                if tag_name == "grupoAlterado":
+                                    grupo = tag_child.text or ""
+                                elif tag_name == "campoAlterado":
+                                    campo = tag_child.text or ""
+                                elif tag_name == "valorAlterado":
+                                    valor = tag_child.text or ""
+                                elif tag_name == "nroItemAlterado":
+                                    nro_item = tag_child.text or ""
 
-                        linha = f"{campo}: {valor}"
-                        if grupo:
-                            linha += f" (Grupo: {grupo})"
-                        if nro_item:
-                            linha += f" [Item: {nro_item}]"
+                            linha = f"{campo}: {valor}"
+                            if grupo:
+                                linha += f" (Grupo: {grupo})"
+                            if nro_item:
+                                linha += f" [Item: {nro_item}]"
 
-                        correcao_lista.append(linha)
+                            correcao_lista.append(linha)
 
                 text = "\n".join(correcao_lista)
             except Exception as e:
