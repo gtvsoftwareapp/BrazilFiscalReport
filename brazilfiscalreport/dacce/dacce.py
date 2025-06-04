@@ -172,11 +172,26 @@ class DaCCe(xFPDF):
         self.rect(x=10, y=104, w=190, h=170, style="")
 
         self.set_xy(x=11, y=106)
+        
         try:
+            # Primeiro tenta buscar o xCorrecao (modelo NF-e)
             text = get_tag_text(node=det_event, url=URL, tag="xCorrecao")
-        except Exception as e:
-            print("[ERRO] Falha ao extrair xCorrecao:", e)
-            text = ""
+        except Exception:
+            try:
+                # Caso não exista xCorrecao (modelo CT-e), monta o texto a partir de infCorrecao
+                inf_correcoes = det_event.findall(".//infCorrecao")
+                correcao_lista = []
+                for correcao in inf_correcoes:
+                    grupo = correcao.findtext("grupoAlterado", default="")
+                    campo = correcao.findtext("campoAlterado", default="")
+                    valor = correcao.findtext("valorAlterado", default="")
+                    if grupo or campo or valor:
+                        correcao_lista.append(f"Grupo: {grupo}, Campo: {campo}, Valor: {valor}")
+                text = "\n".join(correcao_lista)
+            except Exception as e:
+                print("[ERRO] Falha ao extrair informações de correção:", e)
+                text = ""
+
         self.set_font("Helvetica", "", 8)
         self.multi_cell(w=185, h=4, text=text, border=0, align="L", fill=False)
 
