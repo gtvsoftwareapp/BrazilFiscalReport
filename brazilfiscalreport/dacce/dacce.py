@@ -31,8 +31,15 @@ class DaCCe(xFPDF):
 
         root = ET.fromstring(xml)
 
+        # Detecta namespace padrão do XML
         namespace_uri = root.tag.split("}")[0].strip("{")
         URL = f".//{{{namespace_uri}}}"
+
+        # Função auxiliar para extrair texto com namespace, retornando string vazia se não encontrado
+        def find_text_ns(node, tag):
+            if node is None:
+                return ""
+            return node.findtext(f"{URL}{tag}", default="").strip()
 
         is_nfe = "nfe" in namespace_uri.lower()
 
@@ -88,15 +95,15 @@ class DaCCe(xFPDF):
                 print("[ERRO] Falha ao extrair ID do Evento:", e)
 
         try:
-            dh_evento_str = get_tag_text(node=inf_event, url=URL, tag="dhEvento")
+            dh_evento_str = find_text_ns(inf_event, "dhEvento")
             dt, hr = get_date_utc(dh_evento_str)
             self.text(x=92, y=35, text=f"Criado em: {dt} {hr}")
         except Exception as e:
             print("[ERRO] Falha ao extrair dhEvento:", e)
 
         try:
-            dh_reg_str = get_tag_text(node=inf_ret_event, url=URL, tag="dhRegEvento")
-            n_prot = get_tag_text(node=inf_ret_event, url=URL, tag="nProt")
+            dh_reg_str = find_text_ns(inf_ret_event, "dhRegEvento")
+            n_prot = find_text_ns(inf_ret_event, "nProt")
             dt, hr = get_date_utc(dh_reg_str)
             self.text(x=92, y=40, text=f"Protocolo: {n_prot} - Registrado na SEFAZ em: {dt} {hr}")
         except Exception as e:
@@ -119,8 +126,7 @@ class DaCCe(xFPDF):
 
         tag_chave = "chNFe" if is_nfe else "chCTe"
         try:
-            key = get_tag_text(node=inf_event, url=URL, tag=tag_chave)
-            
+            key = find_text_ns(inf_event, tag_chave)
         except Exception as e:
             print("[ERRO] Falha ao extrair chave:", e)
             key = ""
@@ -141,9 +147,9 @@ class DaCCe(xFPDF):
 
         self.set_font("Helvetica", "B", 9)
         try:
-            cnpj_dest = get_tag_text(node=inf_ret_event, url=URL, tag="CNPJDest")
+            cnpj_dest = find_text_ns(inf_ret_event, "CNPJDest")
             if not cnpj_dest:
-                cnpj_dest = get_tag_text(node=inf_ret_event, url=URL, tag="CNPJ")
+                cnpj_dest = find_text_ns(inf_ret_event, "CNPJ")
         except Exception as e:
             print("[ERRO] Falha ao extrair CNPJ Destinatário:", e)
             cnpj_dest = ""
@@ -159,7 +165,7 @@ class DaCCe(xFPDF):
 
         self.set_xy(x=11, y=84)
         try:
-            text = get_tag_text(node=det_event, url=URL, tag="xCondUso")
+            text = find_text_ns(det_event, "xCondUso")
         except Exception as e:
             print("[ERRO] Falha ao extrair xCondUso:", e)
             text = ""
@@ -172,28 +178,26 @@ class DaCCe(xFPDF):
         self.rect(x=10, y=104, w=190, h=170, style="")
 
         self.set_xy(x=11, y=106)
-        
-        self.set_xy(x=11, y=106)
 
-        cte_ns = "{http://www.portalfiscal.inf.br/cte}"  # namespace fixo para CTe
-
+        # Extrair o texto de correção (xCorrecao para NFe ou infCorrecao para CTe)
+        text = ""
         try:
-            # Tenta extrair xCorrecao diretamente
-            text = get_tag_text(node=det_event, url=URL, tag="xCorrecao")
+            # tenta extrair diretamente xCorrecao (NFe)
+            text = find_text_ns(det_event, "xCorrecao")
         except Exception:
+            # Caso não tenha xCorrecao, tenta extrair CTe
             try:
-                # Nova lógica segura para detecção de infCorrecao
                 correcao_lista = []
-                ev_cce_cte = det_event.find(f"{cte_ns}evCCeCTe")
+                # namespace usado já está em URL, usa para buscar evCCeCTe e infCorrecao
+                ev_cce_cte = det_event.find(f"{URL}evCCeCTe")
                 if ev_cce_cte is not None:
-                    inf_correcoes = ev_cce_cte.findall(f"{cte_ns}infCorrecao")
-                    print("[DEBUG] infCorrecao encontrados:", len(inf_correcoes))
+                    inf_correcoes = ev_cce_cte.findall(f"{URL}infCorrecao")
 
                     for correcao in inf_correcoes:
-                        grupo = correcao.findtext(f"{cte_ns}grupoAlterado", default="")
-                        campo = correcao.findtext(f"{cte_ns}campoAlterado", default="")
-                        valor = correcao.findtext(f"{cte_ns}valorAlterado", default="")
-                        nro_item = correcao.findtext(f"{cte_ns}nroItemAlterado", default="")
+                        grupo = correcao.findtext(f"{URL}grupoAlterado", default="")
+                        campo = correcao.findtext(f"{URL}campoAlterado", default="")
+                        valor = correcao.findtext(f"{URL}valorAlterado", default="")
+                        nro_item = correcao.findtext(f"{URL}nroItemAlterado", default="")
 
                         linha = f"{campo}: {valor}"
                         if grupo:
@@ -208,7 +212,7 @@ class DaCCe(xFPDF):
                 print("[ERRO] Falha ao extrair informações de correção:", e)
                 text = ""
 
-        print("[AVISO] Texto de correção:", repr(text))
+        print("[AVISO3] Texto de correção:", repr(text))
         self.set_font("Helvetica", "", 8)
         self.multi_cell(w=185, h=4, text=text, border=0, align="L", fill=False)
 
