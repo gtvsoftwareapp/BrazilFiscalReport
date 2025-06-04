@@ -178,13 +178,13 @@ class DaCCe(xFPDF):
             text = get_tag_text(node=det_event, url=URL, tag="xCorrecao")
         except Exception:
             try:
-                # Tenta identificar se é um evento de CC-e de CT-e
-                ev_cce_cte = det_event.find("evCCeCTe")
+                # Busca evCCeCTe mesmo se estiver aninhado
+                ev_cce_cte = det_event.find(".//evCCeCTe")
                 correcao_lista = []
 
                 if ev_cce_cte is not None:
                     inf_correcoes = ev_cce_cte.findall("infCorrecao")
-                    print("[DEBUG] Quantidade de infCorrecao encontrados:", len(inf_correcoes))
+                    print("[DEBUG] infCorrecao encontrados:", len(inf_correcoes))
 
                     for correcao in inf_correcoes:
                         grupo = correcao.findtext("grupoAlterado", default="")
@@ -202,6 +202,7 @@ class DaCCe(xFPDF):
 
                     text = "\n".join(correcao_lista)
                 else:
+                    print("[ERRO] evCCeCTe não encontrado no XML.")
                     text = ""
 
             except Exception as e:
@@ -212,6 +213,7 @@ class DaCCe(xFPDF):
 
         self.set_font("Helvetica", "", 8)
         self.multi_cell(w=185, h=4, text=text, border=0, align="L", fill=False)
+
 
 
         self.set_xy(x=11, y=265)
