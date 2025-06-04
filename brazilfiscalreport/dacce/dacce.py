@@ -178,6 +178,13 @@ class DaCCe(xFPDF):
         self.rect(x=10, y=104, w=190, h=170, style="")
 
         self.set_xy(x=11, y=106)
+        
+        try:
+            text = find_text_ns(det_event, "xCorrecao")
+            print("[DEBUG] xCorrecao:", repr(text))
+        except Exception as e:
+            print("[ERRO] Falha ao extrair xCorrecao:", e)
+
 
         # Extrair o texto de correção (xCorrecao para NFe ou infCorrecao para CTe)
         text = ""
