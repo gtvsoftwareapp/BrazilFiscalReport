@@ -201,6 +201,8 @@ class DaCCe(xFPDF):
                 print("[ERRO] Falha ao extrair informações de correção:", e)
                 text = ""
 
+        print("[DEBUG] Conteúdo de det_event:")
+        print(ET.tostring(det_event, encoding="unicode"))
         print("[AVISOOOO] Texto de correção:", repr(text))
 
 
