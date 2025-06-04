@@ -177,16 +177,16 @@ class DaCCe(xFPDF):
             text = get_tag_text(node=det_event, url=URL, tag="xCorrecao")
         except Exception:
             try:
-                ns = {"ns": "http://www.portalfiscal.inf.br/cte"}  # Define o prefixo do namespace
+                cte_ns = "{http://www.portalfiscal.inf.br/cte}"
                 correcao_lista = []
-                inf_correcoes = det_event.findall(".//ns:infCorrecao", namespaces=ns)
+                inf_correcoes = det_event.findall(f".//{cte_ns}infCorrecao")
                 print("[DEBUG] infCorrecao encontrados:", len(inf_correcoes))
 
                 for correcao in inf_correcoes:
-                    grupo = correcao.findtext("ns:grupoAlterado", default="", namespaces=ns)
-                    campo = correcao.findtext("ns:campoAlterado", default="", namespaces=ns)
-                    valor = correcao.findtext("ns:valorAlterado", default="", namespaces=ns)
-                    nro_item = correcao.findtext("ns:nroItemAlterado", default="", namespaces=ns)
+                    grupo = correcao.findtext(f"{cte_ns}grupoAlterado", default="")
+                    campo = correcao.findtext(f"{cte_ns}campoAlterado", default="")
+                    valor = correcao.findtext(f"{cte_ns}valorAlterado", default="")
+                    nro_item = correcao.findtext(f"{cte_ns}nroItemAlterado", default="")
 
                     linha = f"{campo}: {valor}"
                     if grupo:
@@ -202,7 +202,7 @@ class DaCCe(xFPDF):
                 print("[ERRO] Falha ao extrair informações de correção:", e)
                 text = ""
 
-        print("[AVISO] Texto de correção:", repr(text))
+        print("[AVISO2] Texto de correção:", repr(text))
         self.set_font("Helvetica", "", 8)
         self.multi_cell(w=185, h=4, text=text, border=0, align="L", fill=False)
 
