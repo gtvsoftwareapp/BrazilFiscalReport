@@ -16,13 +16,12 @@ from ..utils import (
 )
 from ..xfpdf import xFPDF
 
-URL = ".//{http://www.portalfiscal.inf.br/nfe}"
-
 
 class DaCCe(xFPDF):
     """
     Document generation:
-    DACCe - Documento Auxilar da Carta de Correção Eletronica
+    DACCe - Documento Auxiliar da Carta de Correção Eletrônica
+    Compatível com NFe e CTe
     """
 
     def __init__(self, xml=None, emitente=None, image=None):
@@ -31,10 +30,18 @@ class DaCCe(xFPDF):
         self.set_title("DACCe")
 
         root = ET.fromstring(xml)
+
+        # Detecta dinamicamente o namespace
+        namespace_uri = root.tag.split("}")[0].strip("{")
+        URL = f".//{{{namespace_uri}}}"
+
+        # Identifica se é NFe ou CTe
+        is_nfe = "nfe" in namespace_uri.lower()
+
         det_event = root.find(f"{URL}detEvento")
         inf_event = root.find(f"{URL}infEvento")
-        ret_Event = root.find(f"{URL}retEvento")
-        inf_ret_Event = ret_Event.find(f"{URL}infEvento")
+        ret_event = root.find(f"{URL}retEvento")
+        inf_ret_event = ret_event.find(f"{URL}infEvento")
 
         self.add_page(orientation="P", format="A4")
 
@@ -43,6 +50,7 @@ class DaCCe(xFPDF):
         self.line(90, 10, 90, 43)
 
         text = ""
+        emitente_nome = ""
         if emitente:
             emitente_nome = emitente["nome"]
             text = (
@@ -68,10 +76,12 @@ class DaCCe(xFPDF):
         self.set_font("Helvetica", "", 8)
         self.multi_cell(w=80, h=4, text=text, border=0, align="C", fill=False)
 
+        # Cabeçalho CC-e
+        doc_title = "CC-e de Nota Fiscal Eletrônica" if is_nfe else "CC-e de Conhecimento de Transporte Eletrônico"
         self.set_font("Helvetica", "B", 10)
         self.text(x=118, y=16, text="Representação Gráfica de CC-e")
         self.set_font("Helvetica", "I", 9)
-        self.text(x=123, y=20, text="(Carta de Correção Eletrônica)")
+        self.text(x=123, y=20, text=f"({doc_title})")
 
         self.set_font("Helvetica", "", 8)
         self.text(
@@ -79,22 +89,15 @@ class DaCCe(xFPDF):
         )
 
         dt, hr = get_date_utc(get_tag_text(node=inf_event, url=URL, tag="dhEvento"))
-
         self.text(x=92, y=35, text=f"Criado em: {dt} {hr}")
 
         dt, hr = get_date_utc(
-            get_tag_text(node=inf_ret_Event, url=URL, tag="dhRegEvento")
+            get_tag_text(node=inf_ret_event, url=URL, tag="dhRegEvento")
         )
+        n_prot = get_tag_text(node=inf_ret_event, url=URL, tag="nProt")
+        self.text(x=92, y=40, text=f"Protocolo: {n_prot} - Registrado na SEFAZ em: {dt} {hr}")
 
-        n_prot = get_tag_text(node=inf_ret_Event, url=URL, tag="nProt")
-
-        self.text(
-            x=92,
-            y=40,
-            text=f"Protocolo: {n_prot} - Registrado na SEFAZ em: {dt} {hr}",
-        )
-
-        # Destinatário
+        # Mensagem de aviso
         self.rect(x=10, y=47, w=190, h=50, style="")
         self.line(10, 83, 200, 83)
 
@@ -102,18 +105,19 @@ class DaCCe(xFPDF):
         text = (
             "De acordo com as determinações legais vigentes, vimos por "
             "meio desta comunicar-lhe que a Nota Fiscal, "
-            "abaixo referenciada, contêm irregularidades que estão "
-            "destacadas e suas respectivas correções, solicitamos que "
+            "abaixo referenciada, contém irregularidades que estão "
+            "destacadas e suas respectivas correções. Solicitamos que "
             "sejam aplicadas essas correções ao executar seus "
             "lançamentos fiscais."
         )
-
         self.set_font("Helvetica", "", 8)
         self.multi_cell(w=185, h=4, text=text, border=0, align="L", fill=False)
 
-        key = get_tag_text(node=inf_event, url=URL, tag="chNFe")
+        # Chave da NFe ou CTe
+        tag_chave = "chNFe" if is_nfe else "chCTe"
+        key = get_tag_text(node=inf_event, url=URL, tag=tag_chave)
 
-        # Generate a Code128 Barcode as SVG:
+        # Código de barras
         svg_img_bytes = BytesIO()
         Code128(key, writer=SVGWriter()).write(
             svg_img_bytes, options={"write_text": False}
@@ -127,18 +131,20 @@ class DaCCe(xFPDF):
 
         self.set_font("Helvetica", "B", 9)
 
-        text = "CNPJ Destinatário:  %s" % format_cpf_cnpj(
-            get_tag_text(node=inf_ret_Event, url=URL, tag="CNPJDest")
-        )
+        # CNPJ do destinatário
+        cnpj_dest = get_tag_text(node=inf_ret_event, url=URL, tag="CNPJDest")
+        if not cnpj_dest:
+            cnpj_dest = get_tag_text(node=inf_ret_event, url=URL, tag="CNPJ")
+
+        text = f"CNPJ Destinatário:  {format_cpf_cnpj(cnpj_dest)}"
         self.text(x=12, y=71, text=text)
 
-        text = (
-            f"Nota Fiscal: {int(key[25:34]):011,}".replace(",", ".")
-            + f" - Série: {key[22:25]}"
-        )
+        # Nota + Série
+        nf_num = f"{int(key[25:34]):011,}".replace(",", ".")
+        nf_serie = key[22:25]
+        self.text(x=12, y=76, text=f"Nota Fiscal: {nf_num} - Série: {nf_serie}")
 
-        self.text(x=12, y=76, text=text)
-
+        # Condições de uso
         self.set_xy(x=11, y=84)
         text = get_tag_text(node=det_event, url=URL, tag="xCondUso")
         self.set_font("Helvetica", "I", 7)
@@ -152,12 +158,14 @@ class DaCCe(xFPDF):
 
         self.set_xy(x=11, y=106)
         text = get_tag_text(node=det_event, url=URL, tag="xCorrecao")
+        self.set_font("Helvetica", "", 8)
         self.multi_cell(w=185, h=4, text=text, border=0, align="L", fill=False)
 
+        # Rodapé
         self.set_xy(x=11, y=265)
         text = (
             "Este documento é uma representação gráfica da CC-e e "
-            "foi impresso apenas para sua informação e não possue validade "
+            "foi impresso apenas para sua informação e não possui validade "
             "fiscal.\nA CC-e deve ser recebida e mantida em arquivo "
             "eletrônico XML e pode ser consultada através dos portais "
             "das SEFAZ."
