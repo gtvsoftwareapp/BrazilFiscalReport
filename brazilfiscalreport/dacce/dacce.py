@@ -202,7 +202,7 @@ class DaCCe(xFPDF):
                 print("[ERRO] Falha ao extrair informações de correção:", e)
                 text = ""
 
-        print("[AVISOOOO] Texto de correção:", repr(text))
+        print("[AVISO] Texto de correção:", repr(text))
         self.set_font("Helvetica", "", 8)
         self.multi_cell(w=185, h=4, text=text, border=0, align="L", fill=False)
 
