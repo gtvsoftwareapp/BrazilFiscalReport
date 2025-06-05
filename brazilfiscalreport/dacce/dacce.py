@@ -88,7 +88,7 @@ class DaCCe(xFPDF):
         self.set_font("Helvetica", "B", 10)
         self.text(x=118, y=16, text="Representação Gráfica de CC-e")
         self.set_font("Helvetica", "I", 9)
-        self.text(x=123, y=20, text=f"({doc_title})")
+        self.text(x=115, y=20, text=f"({doc_title})")
 
         self.set_font("Helvetica", "", 8)
         if inf_event is not None:
@@ -135,9 +135,11 @@ class DaCCe(xFPDF):
         self.line(10, 83, 200, 83)
 
         self.set_xy(x=11, y=48)
+        
+        desc_aviso = "meio desta comunicar-lhe que a Nota Fiscal, " if is_nfe else "meio desta comunicar-lhe que o Conhecimento de Transporte Eletrônico, "
         aviso = (
             "De acordo com as determinações legais vigentes, vimos por "
-            "meio desta comunicar-lhe que a Nota Fiscal, "
+            + desc_aviso +
             "abaixo referenciada, contém irregularidades que estão "
             "destacadas e suas respectivas correções. Solicitamos que "
             "sejam aplicadas essas correções ao executar seus "
@@ -182,7 +184,6 @@ class DaCCe(xFPDF):
             self.text(x=12, y=71, text=f"{label}:  {format_cpf_cnpj(cnpj_dest)}")
         except Exception as e:
             print("[ERRO] Falha ao extrair CNPJ/Autor do Evento:", e)
-
 
         try:
             nf_num = f"{int(key[25:34]):011,}".replace(",", ".")
