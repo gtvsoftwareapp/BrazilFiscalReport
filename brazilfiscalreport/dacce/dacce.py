@@ -106,12 +106,17 @@ class DaCCe(xFPDF):
             print("[ERRO] Falha ao extrair dhEvento:", e)
 
         try:
-            dh_reg_str = find_text_ns(inf_ret_event, "dhRegEvento")
-            n_prot = find_text_ns(inf_ret_event, "nProt")
-            dt, hr = get_date_utc(dh_reg_str)
-            self.text(x=92, y=40, text=f"Protocolo: {n_prot} - Registrado na SEFAZ em: {dt} {hr}")
+            dh_reg_str = find_text_ns(inf_ret_event, "dhRegEvento") or find_text_ns(inf_event, "dhRegEvento")
+            n_prot = find_text_ns(inf_ret_event, "nProt") or find_text_ns(inf_event, "nProt")
+            
+            if dh_reg_str and n_prot:
+                dt, hr = get_date_utc(dh_reg_str)
+                self.text(x=92, y=40, text=f"Protocolo: {n_prot} - Registrado na SEFAZ em: {dt} {hr}")
+            else:
+                print("[AVISO] Protocolo ou data de registro não encontrado.")
         except Exception as e:
             print("[ERRO] Falha ao extrair dados do protocolo:", e)
+
 
         self.rect(x=10, y=47, w=190, h=50, style="")
         self.line(10, 83, 200, 83)
@@ -150,13 +155,21 @@ class DaCCe(xFPDF):
         self.text(x=130, y=78, text=" ".join(chunks(key, 4)))
 
         self.set_font("Helvetica", "B", 9)
+        
         try:
-            cnpj_dest = find_text_ns(inf_ret_event, "CNPJDest")
-            if not cnpj_dest:
-                cnpj_dest = find_text_ns(inf_ret_event, "CNPJ")
+            if is_nfe:
+                cnpj_dest = find_text_ns(inf_ret_event, "CNPJDest")
+                if not cnpj_dest:
+                    cnpj_dest = find_text_ns(inf_ret_event, "CNPJ")
+                label = "CNPJ Destinatário"
+            else:
+                cnpj_dest = find_text_ns(inf_event, "CNPJ") or find_text_ns(inf_event, "CPF")
+                label = "Autor do Evento"
+
+            self.text(x=12, y=71, text=f"{label}:  {format_cpf_cnpj(cnpj_dest)}")
         except Exception as e:
-            print("[ERRO] Falha ao extrair CNPJ Destinatário:", e)
-            cnpj_dest = ""
+            print("[ERRO] Falha ao extrair CNPJ/Autor do Evento:", e)
+
 
         self.text(x=12, y=71, text=f"CNPJ Destinatário:  {format_cpf_cnpj(cnpj_dest)}")
 
@@ -168,6 +181,7 @@ class DaCCe(xFPDF):
             print("[ERRO] Falha ao extrair número ou série da nota:", e)
 
         self.set_xy(x=11, y=84)
+        
         try:
             text = find_text_ns(det_event, "xCondUso")
         except Exception as e:
