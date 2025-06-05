@@ -104,21 +104,30 @@ class DaCCe(xFPDF):
             self.text(x=92, y=35, text=f"Criado em: {dt} {hr}")
         except Exception as e:
             print("[ERRO] Falha ao extrair dhEvento:", e)
+            
 
         try:
-            if inf_ret_event is not None:
-                dh_reg_str = find_text_ns(inf_ret_event, "dhRegEvento")
-                n_prot = find_text_ns(inf_ret_event, "nProt")
+            # A origem do infEvento muda conforme o tipo de documento
+            inf_evento_protocolo = None
+
+            if is_nfe:
+                inf_evento_protocolo = root.find(f".//{{{namespace_uri}}}retEvento").find(f".//{{{namespace_uri}}}infEvento")
+            else:
+                inf_evento_protocolo = root.find(f".//{{{namespace_uri}}}retEventoCTe").find(f".//{{{namespace_uri}}}infEvento")
+
+            if inf_evento_protocolo is not None:
+                dh_reg_str = find_text_ns(inf_evento_protocolo, "dhRegEvento")
+                n_prot = find_text_ns(inf_evento_protocolo, "nProt")
 
                 if dh_reg_str and n_prot:
                     dt, hr = get_date_utc(dh_reg_str)
                     self.text(x=92, y=40, text=f"Protocolo: {n_prot} - Registrado na SEFAZ em: {dt} {hr}")
                 else:
-                    print("[AVISO] Protocolo ou data de registro não encontrados no inf_ret_event.")
+                    print("[AVISO] Protocolo ou data de registro ausentes.")
             else:
-                print("[AVISO] inf_ret_event está ausente no XML.")
+                print("[AVISO] infEvento do protocolo não localizado.")
         except Exception as e:
-            print("[ERRO] Falha ao extrair dados do protocolo:", e)
+            print("[ERRO] Falha ao extrair protocolo e data de registro:", e)
 
 
 
