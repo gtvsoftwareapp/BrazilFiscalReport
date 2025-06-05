@@ -221,11 +221,11 @@ class DaCCe(xFPDF):
                                 elif tag_name == "nroItemAlterado":
                                     nro_item = tag_child.text or ""
 
-                            linha = f"{campo}: {valor}"
+                            linha = f"Campo: {campo} | Valor: {valor}"
                             if grupo:
-                                linha += f" (Grupo: {grupo})"
+                                linha += f" | Grupo: {grupo}"
                             if nro_item:
-                                linha += f" [Item: {nro_item}]"
+                                linha += f" | Item: {nro_item}"
 
                             correcao_lista.append(linha)
 
@@ -234,7 +234,6 @@ class DaCCe(xFPDF):
                 print("[ERRO] Falha ao extrair informações de correção:", e)
                 text = ""
 
-        print("[AVISO3] Texto de correção:", repr(text))
         self.set_font("Helvetica", "", 8)
         self.multi_cell(w=185, h=4, text=text, border=0, align="L", fill=False)
 
