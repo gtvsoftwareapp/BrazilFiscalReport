@@ -88,7 +88,7 @@ class DaCCe(xFPDF):
         self.set_font("Helvetica", "B", 10)
         self.text(x=118, y=16, text="Representação Gráfica de CC-e")
         self.set_font("Helvetica", "I", 9)
-        self.text(x=115, y=20, text=f"({doc_title})")
+        self.text(x=108, y=20, text=f"({doc_title})")
 
         self.set_font("Helvetica", "", 8)
         if inf_event is not None:
